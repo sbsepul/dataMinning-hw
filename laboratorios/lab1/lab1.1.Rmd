@@ -1,0 +1,231 @@
+---
+title: 'Laboratorio 1.1: Exploración y Visualización de Datos'
+date: "Agosto 2019"
+author: 'Jorge Toloza, Sebastián Sepúlveda'
+output:
+  html_document:
+    theme: default
+    toc: no
+  pdf_document:
+    toc: no
+---
+
+
+# Instrucciones
+
+1. Trabaje en equipos de dos personas. Salvo excepciones, no se corregirá entregas con menos de dos integrantes.
+
+2. Modifique este archivo `.Rmd` agregando sus respuestas donde corresponda. En caso de código, cree un nuevo bloque de sentencias (chunk) para adjuntar su respuesta. Si necesita alguna explicación o fundamento, adjúntelo como texto plano.
+
+3. Para cada pregunta, cuando corresponda, **incluya el código fuente que utilizó para llegar a su respuesta**.
+
+4. Al final de la clase, **genere un archivo HTML usando RStudio** y súbalo a U-Cursos.
+   Basta con que uno de los integrantes haga la entrega. Si ambos hacen una entrega en U-Cursos, se revisará cualquiera de éstas.
+
+
+```{r}
+tipos <- read.table("https://users.dcc.uchile.cl/~hsarmien/mineria/datasets/accidentes_2010_2011.txt")
+head(tipos)
+```
+
+# Parte 1
+
+Utilizaremos un dataset _real_ de número de accidentes de tránsito por localidad, el cual puede ser encontrado en el siguiente link: http://datos.gob.cl/dataset/9348. Para ello, cargue el dataset de número de accidentes de tránsito por localidad y responda las siguientes preguntas.
+
+```{r}
+library(readxl)
+accidentes <- read_excel("INFORME DE ACCIDENTES DE TRÁNSITO PERIODO 2010 - 2011.xlsx")
+head(accidentes)
+```
+
+1. ¿Cuáles son las dimensiones del dataset (filas, columnas)? (Recuerde adjuntar código).
+```{r}
+# RESPUESTA
+# Primero traspasamos nuestro dataset a una matriz para poder obtener los datos de una manera mas simple
+mat <- as.matrix(accidentes)
+
+#luego ocupamos las librerias de matrix para obtener el numero de filas y de columnas
+nrow(mat) #numero de filas
+ncol(mat) #numero de columnas
+
+```
+
+2. ¿Qué describe cada línea del dataset? (ejemplifique tomando el dato de la fila 100). No es necesario explicar cada columna, sino más bien una idea de lo que plantea cada fila en el dataset.
+
+```{r}
+accidentes[100,]
+```
+
+Respuesta:
+  Considerando la fila 100 como se nos pide, vemos que los datos nos entregan una descripcion general de los accidentes ocurridos en cierto lugar del país. Nos entrega el sector principal, en este caso "RIO HURTADO", el año en qué ocurrió el hecho, el tipo de sector con el que estamos trabajando, y los hechos ocurridos, en este caso 2 Volcaduras y 3 Lesiones leves.
+
+
+3. Filtre los datos y genera un dataframe en el cual se indique la cantidad de accidentes tipo ``Volcadura`` que hubo en el año ``2010`` en cada localidad.
+
+```{r}
+print(accidentes[accidentes$Año==2010 & accidentes$Volcadura!=0,c("Muestra", "Descripcion Muestra" ,"Año", "Volcadura")])
+```
+
+4. Filtre los datos para incluir sólo los accidentes ocurridos el año 2011. Genere un boxplot donde se indique la cantidad de accidentes categorizado por tipo de accidente. Este tipo de gráfico nos ayudará a entender como se distribuye los datos por cada tipo de accidentes. Es decir, podremos apreciar que tan dispersos o similares son los datos en todo el dataset. También, puede ser útil para observar valores atípicos o outliers en los datos. 
+
+```{r}
+library("reshape")
+```
+
+```{r}
+library("reshape")
+d <- data.frame(accidentes[1:9])
+d2 <- melt(d, id=c(1,2,3))
+v11 <- d2[d2$Año==2011, ]
+plot(v11$variable, v11$value, ylim=c(0,400), main="Tipos de Accidentes 2011", 
+     xlab="Tipo de accidente", ylab="Cantidad")
+
+```
+
+
+5. ¿Qué otra forma de explorar los datos podría agregar? ¿Qué información adicional aporta? Adjunte código y breve explicación.
+
+```{r}
+d <- data.frame(accidentes[c(1,2,3, 10:13)])
+v <- melt(d, id=c(1,2,3),variable_name = "Estado")
+vm11 <- with(v,
+                  v[ Muestra == "Regional" &
+                                Año == 2011 &
+                              Estado == "Muertos", ])
+
+barplot(vm11$value, names.arg = vm11$Descripcion, main="Muertos por region el 2011",
+   xlab="Regiones", ylab="Cantidad")
+print(vm11)
+```
+
+El grafico anterior se basó de la sección _Barplot_ del tutorial, y muestra la cantidad de muertos el año 2011 por accidentes de cualquier tipo por cada Region. El gráfico de barras permite una mejor visualización de los datos cuando hay modas, en el ejemplo se puede observar que la ultima barra, que pertenece a la Región de la Araucania presenta una gran cantidad de muertos por accidentes. 
+
+
+# Parte 2
+Cargue el dataset de _afectados_ por accidentes de tránsito y responda las siguientes preguntas.
+
+```{r}
+afectados <- read.table("https://users.dcc.uchile.cl/~hsarmien/mineria/datasets/afectados_2010_2011.txt")
+```
+
+1. En base al gráfico presentado más abajo ¿Sería razonable comparar la cantidad de heridos leves de la `Región Metropolitana` con la `Región de los Lagos`? ¿Por qué? Si su respuesta es negativa, proponga una forma de hacer una mejor comparación.
+
+2. De acuerdo al siguiente gráfico ¿Qué es lo que quiere mostrar? Proponga una forma de _mejorar_ este gráfico y cómo esa forma cumple mejor el objetivo de la visualización.
+
+```{r, fig.height=12, fig.width=12, echo = F, warning= F, message= F}
+library(ggplot2)
+ggplot(data = afectados[afectados$Muestra == "Regional", ]) +
+  geom_bar(aes(x = Descripcion, y = Cantidad), stat = "identity") + 
+  facet_grid(Estado ~ Anio) +
+  coord_flip() +
+  xlab("Comuna") + 
+  ylab("Cantidad")   
+```
+
+## Respuesta:
+
+Respecto a la mejora que se le puede realizar al gráfico es mostrar los datos por cada región según la población total de cada uno de ellos, pues como se mencionó en la pregunta anterior no es razonable comparar dos regiones con cantidad de poblacion totalmente distintas.
+
+```{r, fig.height=12, fig.width=12, echo = F, warning= F, message= F}
+library(tidyverse)
+library(ggplot2)
+afectados_base <- afectados[afectados$Muestra == "Regional", ]
+sp <- afectados_base %>%
+  spread(key = Estado, value = Cantidad)
+afectados_mutated <- mutate(sp, Totales = rowSums(sp[c(4:7)]))
+afectados_melted <- melt(afectados_mutated, id = c("Muestra","Descripcion","Anio","Totales"),variable_name = "Estado")
+
+ggplot(afectados_melted) +
+  geom_bar(aes(x = Descripcion, y = 100*value/Totales), stat = "identity") + 
+  facet_grid(Estado ~ Anio) +
+  coord_flip() +
+  xlab("Comuna") + 
+  ylab("Cantidad")   
+```
+
+
+# Parte 3
+
+Vamos a estimar la cantidad de muertos por accidente de tránsito por cada diez mil habitantes de cada comuna. Note que un accidente de tránsito puede ser Choque, Colisión, Atropello, etc.
+
+Cargue el dataset de número de habitantes por cada comuna, obtenido a partir de datos del Censo 2002.
+
+```{r}
+poblacion <- read.table("https://users.dcc.uchile.cl/~hsarmien/mineria/datasets/demografico.txt", header=T)
+head(poblacion)
+```
+
+Además, ejecute y genere los siguientes datasets:
+
+```{r}
+muertosPorComuna <- with(afectados, afectados[Muestra == "Comunal" & Estado == "Muertos" & Anio == 2011, ])
+
+tiposPorComuna <- with(tipos, tipos[Muestra == "Comunal" & Anio == 2011, ])
+
+accidentesPorComuna <- aggregate(Cantidad ~ Descripcion, tiposPorComuna, FUN=sum)
+
+cruceAccidentes <- merge(accidentesPorComuna, poblacion, by="Descripcion")
+```
+
+
+1. Explique brevemente qué datos muestran los nuevos dataframes generados: `muertosPorComuna`, `tiposPorComuna` y `accidentesPorComuna`.
+
+```{r}
+head(muertosPorComuna)
+#Muestra la cantidad de muertos por cada comuna del pais el año 2011
+head(tiposPorComuna)
+#Muestra el tipo de accidente con la cantidad de accidentados por cada comuna del pais el año 2011
+head(accidentesPorComuna)
+#Muestra el total de accidentes que hubo en cada comuna del pais el año 2011, esto se realiza con una suma por cada tipo de accidente por comuna el año 2011 (group by en tiposPorComuna)
+head(cruceAccidentes)
+#Muestra la cantidad de accidentes en cada comuna y además muestra la población que hay en cada comuna, esto se realiza para obtener la proporción de accidentes por comuna por cada 10 mil habitantes
+```
+
+
+2. Ordene cada uno de los datasets `muertosPorComuna` y `cruceAccidentes` por el nombre de la comuna (Descripcion). Hint: Use ```order```. 
+
+```{r}
+orden_m <- muertosPorComuna[order(muertosPorComuna$Descripcion),]
+orden_c <- cruceAccidentes[order(cruceAccidentes$Descripcion),]
+head(orden_m)
+```
+
+
+3. Genere un nuevo dataframe que contenga el nombre de la comuna y la _cantidad de muertes por cualquier tipo de accidente de tránsito_ por cada diez mil habitantes en cada una de las comunas. Este último valor lo puede generar mediante la siguiente fórmula:
+
+```{r}
+MuertesPorAccidente = 100000 * orden_m$Cantidad / (orden_c$Cantidad * orden_c$Poblacion + 1)
+muertes <- data.frame(orden_m$Descripcion, MuertesPorAccidente)
+names(muertes)[1] <- "Descripcion"
+head(muertes)
+
+```
+
+El dataframe resultante debe verse como el siguiente ejemplo: (_Hint: Considere sección 1 y 5 del tutorial._)
+
+| Descripcion | MuertesPorAccidente |
+|-------------|---------------------|
+| AISEN       | 0.173356644        |
+| ALGARROBO   | 0.086357277        |
+| ALHUE       | 3.073424102        |
+| ...         | ...                 |
+
+
+
+4. Según los datos obtenidos, genere un gráfico de barras con las top 10 comunas con mayor tasa de muertes por accidente de tránsito. _Hint: para ordenar los datos en un gráfico de barras, en ggplot use `aes(x=reorder(Descripcion, muertesPorAccidente), y=muertesPorAccidente))`. _
+
+```{r}
+muertesDesc <- muertes[order(muertes$MuertesPorAccidente,decreasing = TRUE),]
+muertesTop <- muertesDesc[1:10,]
+print(muertesTop)
+library(ggplot2)  # cargamos la librería
+ggplot(muertesTop) +   # asociamos un data frame a ggplot
+  geom_bar(aes(x=reorder(Descripcion, MuertesPorAccidente), y=MuertesPorAccidente), stat="identity") +   # creamos un grafico de barras como una capa
+  coord_flip() +  # transformamos el grafico invirtiendo los ejes de coordenadas (sólo visualmente)
+  ggtitle("Comunas con mayor tasa de muertes por A.T el 2011") + # título
+  xlab("Comuna (descripción)") + ylab("Frecuencia (cantidad)")  # etiquetas
+
+```
+
+
+

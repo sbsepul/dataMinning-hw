@@ -1,0 +1,201 @@
+---
+title: 'Laboratorio 1.2: Exploración y Visualización de Datos'
+author: "NOMBRE DE LOS INTEGRANTES: Nicolas Grágeda - Sebastian Sepulveda "
+date: "Agosto 2019"
+output: 
+  html_document: 
+    theme: default
+    toc: yes
+---
+
+# Instrucciones
+
+1. Trabaje en equipos de dos personas. Salvo excepciones, no se corregirá entregas con menos de dos integrantes.
+
+2. Modifique este archivo `.Rmd` agregando sus respuestas donde corresponda.
+
+3. Para cada pregunta, cuando corresponda, **incluya el código fuente que utilizó para llegar a su respuesta**.
+
+4. Al final de la clase, **genere un archivo HTML usando RStudio** y súbalo a U-Cursos.
+   Basta con que uno de los integrantes haga la entrega. Si ambos hacen una entrega en U-Cursos, se revisará cualquiera de éstas.
+
+
+# Laboratorio
+
+En esta sesión trabajaremos con los datos del Proceso Constituyente 2016-2017 publicados en el Portal de Datos Abiertos del Gobierno de Chile. Los datos corresponden a las actas de los Encuentros Locales Autoconvocados (ELAs), en cada cual, un grupo de personas se reune a discutir distintos conceptos como por ejemplo; salud, educación, seguridad, etc.
+
+Los datos con que trabajaremos consisten en la cantidad de veces que cada concepto constitucional fue mencionado por cada localidad de Chile. 
+
+Para cargar los datos, use:
+
+```{r}
+data_tf <- read.csv("http://dcc.uchile.cl/~hsarmien/mineria/datasets/actas.txt", header = T)
+```
+
+**Por cada pregunta adjunte el código R que utilizó para llegar a la respuesta. Respuestas sin código no serán evaluadas**
+
+## 1. Exploración básica
+
+1. ¿Cuáles son las dimensiones del dataset (filas, columnas)? Adjunte código o indique cómo determinó la cantidad de datos total. 
+```{r }
+# RESPUESTA
+mat <- as.matrix(data_tf)
+
+#luego ocupamos las librerias de matrix para obtener el numero de filas y de columnas
+nrow(mat) #numero de filas
+ncol(mat) #numero de columnas
+
+
+#dim(data_tf)[0] #numero de columnas
+#dim(data_tf)[1] #numero de filas
+```
+
+2. ¿Qué describe cada línea del dataset? (ejemplifique tomando el dato de la fila 20)
+
+```{r }
+# RESPUESTA
+data_tf[20,]
+```
+
+Como se menciona en el principio del documento, el dataset es sobre el Proceso Constituyente 2016-2017 publicados en el Portal de Datos Abiertos del Gobierno de Chile, donde se guarda la cantidad de veces que cada concepto constitucional fue mencionado en cada localidad de Chile, donde la primera columna representa el nombre de la localidad, y las otras columnas los conceptos
+
+3. ¿Existen localidades repetidas en el dataset? Adjunte el código o indique cómo llegó a esa conclusión. 
+
+```{r}
+length(unique(data_tf$localidad)) == nrow(data_tf)
+#columnas, filas
+```
+
+Como se pudo ver anteriormente, _unique_ entrega los datos de una columna sin repetir y se observa que esta cantidad es igual a la original, por lo que no se tiene datos repetidos.
+
+4. Liste los nombres de las columnas del dataset `data_tf`. Adjunte código en R y recuerde que si el resultado es muy largo emplee `head`. 
+
+```{r}
+nom <-data.frame(names(data_tf))
+head(nom)
+```
+
+
+## 2. Análisis
+
+1. Liste todas las localidades donde *no* se discutió el concepto `a_la_salud`.
+
+```{r}
+no_dis <- data_tf[data_tf$a_la_salud==0, c("localidad")]
+print(no_dis)
+length(no_dis)
+```
+
+
+2. Liste las 10 localidades que más mencionaron el concepto `patriotismo`.
+
+```{r}
+pat<-data_tf[order(data_tf$patriotismo, decreasing = TRUE),]
+#pat <- data_tf[order(data_tf$patriotismo, c("localidades")), ]
+
+pat[1:10,c("localidad")] 
+```
+
+
+3. Liste las 10 localidades que más participaron en el proceso. Describa cómo definió su medida de participación.
+```{r}
+odf <- data.frame(data_tf[c("localidad")],Participacion=rowSums(data_tf[2:113]))
+odf <- odf[order(odf$Participacion, decreasing = TRUE),]
+odf[1:10,]
+```
+
+El criterio utilizado fue la cantidad total de veces que fue nombrado cualquiera de los conceptos constitucionales. Sin embargo, este criterio puede que no sea suficiente pues pudo existir localidades cuya participacion fue alta en un tema en particular y no en todas las discuciones.
+
+4. Liste los 10 conceptos menos mencionados a lo largo de todo el proceso.
+
+```{r}
+ocdf <- data.frame(names(data_tf)[2:113], colSums(data_tf[2:113]))
+names(ocdf)[1] <- "nombres"
+names(ocdf)[2] <- "cantidad"
+ocdf <- ocdf[order(ocdf$cantidad),]
+ocdf[1:10,]
+# Los primeros 10 terminos son la cantidad de los conceptos mas mencionados 
+#ocdf <- data.frame(data_tf)
+```
+
+
+5. Ejecute el  siguiente código que permitirá agregar una nueva columna a nuestro dataframe que solo tendrá el nombre de la región.
+```{r, message = F, warning=F}
+library(dplyr)
+regiones <- strsplit(as.character(data_tf[,1]), '/')
+data_tf$region <- sapply(regiones, "[[", 1)
+data_tf <- data_tf %>% select(localidad, region, everything())
+```
+
+Luego, mediante un gráficos de barras (ggplot), muestre los top 10 conceptos más mencionados en cada una de las siguientes regiones (adjunte gráficos y código):
+
+
+
+```{r}
+library(reshape)
+library(ggplot2)  # cargamos la librería
+data2 <- data_tf[,-1]
+v <- melt(data2, id=c(1),variable_name = "concepto")
+names(v)[3]="valor"
+a1 <- aggregate(valor ~ region + concepto, v, FUN=sum)
+a1 <- a1[a1$region=="Atacama",]
+a1 <- a1[order(a1$valor, decreasing = TRUE),]
+a1 <- a1[1:10,]
+
+a2 <- aggregate(valor ~ region + concepto, v, FUN=sum)
+a2 <- a2[a2$region=="Los Rios",]
+a2 <- a2[order(a2$valor, decreasing = TRUE),]
+a2 <- a2[1:10,]
+
+a3 <- aggregate(valor ~ region + concepto, v, FUN=sum)
+a3 <- a3[a3$region=="Metropolitana de Santiago",]
+a3 <- a3[order(a3$valor, decreasing = TRUE),]
+a3 <- a3[1:10,]
+
+ggplot(a1) +
+  geom_bar(aes(x = concepto, y = valor), stat="identity") +   
+  coord_flip() +  
+  ggtitle("Top 10 conceptos - Atacama") + # título
+  xlab("Concepto") + ylab("Valor")  # etiquetas
+
+ggplot(a2) +
+  geom_bar(aes(x = concepto, y = valor), stat="identity") +   
+  coord_flip() +  
+  ggtitle("Top 10 conceptos - Los Rios") + # título
+  xlab("Concepto") + ylab("Valor")  # etiquetas
+
+ggplot(a3) +
+  geom_bar(aes(x = concepto, y = valor), stat="identity") +   
+  coord_flip() +  
+  ggtitle("Top 10 conceptos - Santiago") + # título
+  xlab("Concepto") + ylab("Valor")  # etiquetas
+
+
+
+ggplot() + 
+  geom_bar(data=a3,aes(x = concepto, y = valor, fill=region), stat="identity") +
+  geom_bar(data=a1,aes(x = concepto, y = valor, fill=region), stat="identity") +
+  geom_bar(data=a2,aes(x = concepto, y = valor, fill=region), stat="identity") +
+  ggtitle("Top 10 conceptos - 3 regiones") + # título
+  xlab("Concepto") + ylab("Cantidad de Participacion")  # etiquetas
+
+#a1 %>%
+#  filter(region=="Atacama") %>%
+#  arrange(region, -valor)
+  
+#a2 <- aggregate(valor ~ region , a, FUN=max)
+#combi <- merge(a1,a2)
+
+#v %>%
+#  group_by(region,valores)
+```
+
+- `Atacama`
+- `Los Rios`
+- `Metropolitana de Santiago`
+
+
+6. De la pregunta anterior, ¿considera que es razonable usar el conteo de frecuencias para determinar las regiones que tuvieron mayor participación en el proceso? ¿Por qué? Sugiera y solamente comente una forma distinta de hacerlo.
+
+
+
